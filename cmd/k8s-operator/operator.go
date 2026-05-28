@@ -290,6 +290,20 @@ func serviceManagedResourceFilterPredicate() predicate.Predicate {
 	})
 }
 
+// Check to verify that either the new OR old object had the ProxyGroup annotation, allowing
+// either cleanup (if on old, but not new) or skip (on neither)
+func serviceHasProxyGroupAnnotationPredicate() predicate.Predicate {
+    has := func(o client.Object) bool {
+        return o != nil && o.GetAnnotations()[AnnotationProxyGroup] != ""
+    }
+    return predicate.Funcs{
+        CreateFunc:  func(e event.CreateEvent) bool  { return has(e.Object) },
+        DeleteFunc:  func(e event.DeleteEvent) bool  { return has(e.Object) },
+        UpdateFunc:  func(e event.UpdateEvent) bool  { return has(e.ObjectOld) || has(e.ObjectNew) },
+        GenericFunc: func(e event.GenericEvent) bool { return has(e.Object) },
+    }
+}
+
 type (
 	ClientProvider interface {
 		For(tailnet string) (tsclient.Client, error)
